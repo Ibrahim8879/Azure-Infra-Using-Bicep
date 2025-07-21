@@ -1,0 +1,62 @@
+name: 'Bicep Unit Tests'
+
+# We run on just PRs + main since this validate requires full read/write permissions to Azure and we can't do wildcards for the branch name in Azure OIDC federated credentials
+on:
+  pull_request:
+    branches:
+    - main
+
+env:
+  LOCATION: "southeastasia"
+  
+#Special permissions required for OIDC authentication
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure Login (One-time credentials)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy OIDC Setup
+        id: deploy_oidc
+        run: |
+          az deployment sub create \
+            --location $LOCATION \
+            --template-file ./src/iac/az-controllers/az-entraid/main.bicep \
+            --parameters ./src/params/entraid/main.bicepparam \
+            --output json > deployment_output.json
+
+      - name: Extract Deployment Outputs
+        id: extract_outputs
+        run: |
+          AZURE_CLIENT_ID=$(jq -r '.properties.outputs.AZURE_CLIENT_ID.value' deployment_output.json)
+          AZURE_TENANT_ID=$(jq -r '.properties.outputs.AZURE_TENANT_ID.value' deployment_output.json)
+          AZURE_SUBSCRIPTION_ID=$(jq -r '.properties.outputs.AZURE_SUBSCRIPTION_ID.value' deployment_output.json)
+
+          echo "AZURE_CLIENT_ID=$AZURE_CLIENT_ID" >> $GITHUB_ENV
+          echo "AZURE_TENANT_ID=$AZURE_TENANT_ID" >> $GITHUB_ENV
+          echo "AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID" >> $GITHUB_ENV
+
+          echo "::set-output name=client_id::$AZURE_CLIENT_ID"
+          echo "::set-output name=tenant_id::$AZURE_TENANT_ID"
+          echo "::set-output name=subscription_id::$AZURE_SUBSCRIPTION_ID"
+
+
+      - name: Print captured values
+        run: |
+          echo "Client ID: $AZURE_CLIENT_ID"
+          echo "Tenant ID: $AZURE_TENANT_ID"
+          echo "Subscription ID: $AZURE_SUBSCRIPTION_ID"
