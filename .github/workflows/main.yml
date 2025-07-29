@@ -29,17 +29,12 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     - name: Deploy Bicep
-      uses: azure/arm-deploy@v1
-      with:
-        scope: subscription
-        region: southeastasia
-        parameters: ./src/params/main.bicepparam
-        template: ./src/iac/az-controllers/az-services/main.bicep
-        failOnStdErr: false
-        deploymentMode: Incremental
-      env:
-        # Enable verbose output for Azure CLI commands (used by azure/arm-deploy)
-        AZURE_LOG_LEVEL: verbose
+      run: |
+        az deployment group create \
+          --location southeastasia \
+          --template-file ./src/iac/az-controllers/az-services/main.bicep \
+          --parameters ./src/params/main.bicepparam \
+          --debug
 
   trigger-app-deploy:
     name: Trigger App Deployment
