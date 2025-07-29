@@ -30,7 +30,7 @@ jobs:
 
     - name: Deploy Bicep
       run: |
-        az deployment group create \
+        az deployment sub create \
           --location southeastasia \
           --template-file ./src/iac/az-controllers/az-services/main.bicep \
           --parameters ./src/params/main.bicepparam \
