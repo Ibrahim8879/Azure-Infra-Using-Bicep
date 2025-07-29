@@ -1,4 +1,4 @@
-using './../iac/az-controllers/az-services/main.bicep'
+using './../iac/az-controllers/az-services/test.bicep'
 
 param mainResourceGroup = {
   location: 'southeastasia'
@@ -143,11 +143,9 @@ param userAssignedIdentity = {
 
 param RoleAssignment = {
   vm: {
-    roleName: 'Contributor'
     roleDefinitionId: 'b24988ac-6180-42a0-ab88-20f7382dd24c' // Contributor
   }
   userAssignedIdentity: {
-    roleName: 'Owner'
     roleDefinitionId: '8e3af657-a8ff-443c-a75c-2fe8c4bcb635' // Owner
   }
 }
@@ -172,10 +170,9 @@ param automationRunbook = {
 
 param appServicePlan = {
   name: 'appazgoat-app-service-plan'
-  kind: 'FunctionApp'
+  kind: 'linux'
   sku: {
-    name: 'Y1'
-    tier: 'Dynamic'
+    name: 'F1'
   }
   properties: {
     reserved: true
@@ -198,6 +195,7 @@ param functionApp = {
       appName: 'appsettings'
       runtime: 'python|3.9'
     }
+    appSettings :[]
   }
   backend: {
     name: 'appazgoat-function-app'
@@ -211,6 +209,7 @@ param functionApp = {
       appName: 'appsettings'
       runtime: 'node|12'
     }
+    appSettings :[]
   }
 }
 

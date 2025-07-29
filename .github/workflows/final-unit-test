@@ -1,0 +1,137 @@
+name: "Setup & Deploy"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  LOCATION: "southeastasia"
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  check-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      # Conditionally run OIDC setup only if secrets are missing
+      - name: Check if AZURE_CLIENT_ID secret exists
+        id: check_secret
+        run: |
+          if [ -z "${{ secrets.AZURE_CLIENT_ID }}" ]; then
+            echo "run_oidc=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_oidc=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Login to Azure (using temp creds)
+        if: steps.check_secret.outputs.run_oidc == 'true'
+       steps:
+      - uses: actions/checkout@v4
+      - name: Set up Azure CLI
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+      - name: Run OIDC Setup Script
+        run: |
+          chmod +x setup-oidc.sh
+          ./setup-oidc.sh > output.txt
+        env:
+          AZURE_ADMIN_USERNAME: ${{ secrets.AZURE_ADMIN_USERNAME }}
+          AZURE_ADMIN_PASSWORD: ${{ secrets.AZURE_ADMIN_PASSWORD }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          client-id: ${{ secrets.FALLBACK_CLIENT_ID }}
+          tenant-id: ${{ secrets.FALLBACK_TENANT_ID }}
+          subscription-id: ${{ secrets.FALLBACK_SUBSCRIPTION_ID }}
+
+      - name: Deploy OIDC Setup (only when secrets missing)
+        if: steps.check_secret.outputs.run_oidc == 'true'
+        run: |
+          az deployment sub create \
+            --location $LOCATION \
+            --template-file ./src/iac/az-controllers/az-entraid/main.bicep \
+            --parameters ./src/params/entraid/main.bicepparam \
+            --output json > deployment_output.json
+
+      - name: Extract Outputs & Set Env (only if OIDC ran)
+        if: steps.check_secret.outputs.run_oidc == 'true'
+        run: |
+          AZURE_CLIENT_ID=$(jq -r '.properties.outputs.AZURE_CLIENT_ID.value' deployment_output.json)
+          AZURE_TENANT_ID=$(jq -r '.properties.outputs.AZURE_TENANT_ID.value' deployment_output.json)
+          AZURE_SUBSCRIPTION_ID=$(jq -r '.properties.outputs.AZURE_SUBSCRIPTION_ID.value' deployment_output.json)
+
+          echo "AZURE_CLIENT_ID=$AZURE_CLIENT_ID" >> $GITHUB_ENV
+          echo "AZURE_TENANT_ID=$AZURE_TENANT_ID" >> $GITHUB_ENV
+          echo "AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID" >> $GITHUB_ENV
+
+      # If secrets already exist, just use them
+      - name: Export secrets to env
+        if: steps.check_secret.outputs.run_oidc == 'true'
+        run: |
+          echo "AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $GITHUB_ENV
+          echo "AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $GITHUB_ENV
+          echo "AZURE_SUBSCRIPTION_ID=${{ secrets.AZURE_SUBSCRIPTION_ID }}" >> $GITHUB_ENV
+          if [ -z "${{ secrets.AZURE_CLIENT_ID }}" ]; then
+            echo "run_oidc=true" >> $GITHUB_OUTPUT
+          else
+            echo "run_oidc=false" >> $GITHUB_OUTPUT
+          fi
+
+      # Login using final client details (from env or secrets)
+      - name: Azure Login (final)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      # --------------------------
+      # 🔽 Your main deploy section
+      # --------------------------
+      - name: Bicep Lint
+        uses: azure/cli@v2
+        with:
+          inlineScript: az bicep build --file ./src/iac/az-controllers/azure-services/main.bicep
+
+      - name: Bicep What-If Preview
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az deployment sub what-if \
+              --name whatif-${{ github.run_id }} \
+              --template-file ./src/iac/az-controllers/azure-services/main.bicep \
+              --parameters ./src/params/dev/main.bicepparam \
+              --location $LOCATION
+
+      - name: Bicep Validate
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az deployment sub validate \
+              --name validate-${{ github.run_id }} \
+              --template-file ./src/iac/az-controllers/azure-services/main.bicep \
+              --parameters ./src/params/main.bicepparam \
+              --location $LOCATION
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          framework: bicep
+        continue-on-error: true
+
+      - name: PSRule
+        uses: microsoft/ps-rule@v2.9.0
+        with:
+          modules: PSRule.Rules.Azure
+          outputFormat: sarif
+          summary: true
+          inputPath: ./src
+          option: .ps-rule.yaml

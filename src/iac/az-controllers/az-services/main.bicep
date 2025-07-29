@@ -227,12 +227,12 @@ module azureGoatUserAssignedIdentity './../../../iac/az-modules/Microsoft.Manage
   ]
 }
 
-// Role Assignment module
-module azureGoatRoleAssignmentVM './../../../iac/az-modules/Microsoft.Authorization/roleassignment/deploy.bicep' = {
+// Role Assignment module (Add the Proper Resource ID's on it)
+module azureGoatRoleAssignmentVM '../../az-modules/Microsoft.Authorization/custom_roleassignment_module/deploy.bicep' = {
   name: 'azureGoatRoleAssignmentVM'
   scope: resourceGroup(mainResourceGroup.name)
   params: {
-    roleName: RoleAssignment.vm.roleName
+    resourceId: azureGoatVirtualMachine.outputs.vmId
     roleDefinitionId: RoleAssignment.vm.roleDefinitionId
     principalId: azureGoatVirtualMachine.outputs.vmId
   }
@@ -240,17 +240,16 @@ module azureGoatRoleAssignmentVM './../../../iac/az-modules/Microsoft.Authorizat
     azureGoatResourceGroup
   ]
 }
-module azureGoatRoleAssignmentUserAssignedIdentity './../../../iac/az-modules/Microsoft.Authorization/roleassignment/deploy.bicep' = {
+module azureGoatRoleAssignmentUserAssignedIdentity '../../az-modules/Microsoft.Authorization/custom_roleassignment_module/deploy.bicep' = {
   name: 'azureGoatRoleAssignmentUserAssignedIdentity'
   scope: resourceGroup(mainResourceGroup.name)
   params: {
-    roleName: RoleAssignment.userAssignedIdentity.roleName
+    resourceId: azureGoatVirtualMachine.outputs.vmId
     roleDefinitionId: RoleAssignment.userAssignedIdentity.roleDefinitionId
-    principalId: azureGoatUserAssignedIdentity.outputs.identityId
+    principalId: azureGoatVirtualMachine.outputs.vmId
   }
   dependsOn: [
     azureGoatResourceGroup
-    azureGoatUserAssignedIdentity
   ]
 }
 
