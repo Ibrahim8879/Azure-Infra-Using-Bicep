@@ -8,6 +8,7 @@ resource srcControls 'Microsoft.Web/sites/sourcecontrols@2023-12-01' = {
   properties: {
     repoUrl: repositoryUrl
     branch: branch
-    isManualIntegration: false
+    isManualIntegration: true
+    isGitHubAction: true
   }
 }
