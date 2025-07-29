@@ -36,6 +36,10 @@ jobs:
         parameters: ./src/params/main.bicepparam
         template: ./src/iac/az-controllers/az-services/main.bicep
         failOnStdErr: false
+        deploymentMode: Incremental
+      env:
+        # Enable verbose output for Azure CLI commands (used by azure/arm-deploy)
+        AZURE_LOG_LEVEL: verbose
 
   trigger-app-deploy:
     name: Trigger App Deployment
