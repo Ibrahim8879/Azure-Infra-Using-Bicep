@@ -1,4 +1,4 @@
-using '../iac/az-controllers/az-services/test.bicep'
+using '../iac/az-controllers/az-services/main.bicep'
 
 param mainResourceGroup = {
   location: 'southeastasia'
