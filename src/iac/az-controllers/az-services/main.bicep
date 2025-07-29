@@ -57,7 +57,7 @@ module sourceControlWebApp '../../az-modules/Microsoft.Web/webapp/sourcecontrols
   name: 'sourceControlWebApp'
   scope: resourceGroup(mainResourceGroup.name)
   params: {
-    web: 'azuregoat-ibr-source'
+    web: 'ibrsource'
     webApp: 'azuregoat-ibr-webapp'
   }
   dependsOn: [

@@ -1,7 +1,7 @@
 param location string = resourceGroup().location
 param webAppName string = 'azuregoat-ibr-webapp'
 param appServicePlanId string
-param linuxFxVersion string = 'node|20-lts' // Runtime stack of the web app
+param linuxFxVersion string = 'DOTNETCORE|6.0' // Runtime stack of the web app
 
 resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   name: webAppName
@@ -9,9 +9,11 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
   kind: 'app'
   properties: {
     serverFarmId: appServicePlanId
-    httpsOnly: true
     siteConfig: {
       linuxFxVersion: linuxFxVersion
     }
+  }
+  identity: {
+    type: 'SystemAssigned'
   }
 }
