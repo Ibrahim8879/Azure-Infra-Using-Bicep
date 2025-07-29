@@ -1,5 +1,5 @@
 param location string = resourceGroup().location
-param webAppName string = 'dotnetcore-webapp'
+param webAppName string = 'azuregoat-ibr-webapp'
 param appServicePlanId string
 param linuxFxVersion string = 'node|20-lts' // Runtime stack of the web app
 
