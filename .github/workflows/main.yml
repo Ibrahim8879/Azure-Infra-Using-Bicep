@@ -34,7 +34,7 @@ jobs:
         scope: subscription
         region: southeastasia
         parameters: ./src/params/main.bicepparam
-        template: ./src/iac/az-controllers/azure-services/test.bicep
+        template: ./src/iac/az-controllers/az-services/test.bicep
         failOnStdErr: false
 
   trigger-app-deploy:
