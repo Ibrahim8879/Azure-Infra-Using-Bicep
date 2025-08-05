@@ -12,6 +12,7 @@ module azureGoatResourceGroup '../../az-modules/Microsoft.Resources/resourcegrou
   }
 }
 
+// This have OIDC creation, role assignment etc.
 module appRegistrationSetup '../../az-modules/Microsoft.Graph/appregistration/deploy.bicep' = {
   name: 'appRegistrationSetup'
   scope: resourceGroup(resourcegroup.name)

@@ -13,4 +13,7 @@ resource webApp 'Microsoft.Web/sites@2023-12-01' = {
       linuxFxVersion: linuxFxVersion
     }
   }
+  identity: {
+    type: 'SystemAssigned'
+  }
 }

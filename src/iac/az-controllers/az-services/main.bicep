@@ -53,16 +53,16 @@ module azureGoatWebApp '../../az-modules/Microsoft.Web/webapp/deploy.bicep' = {
   ]
 }
 
-module sourceControlWebApp '../../az-modules/Microsoft.Web/webapp/sourcecontrols/deploy.bicep' = {
-  name: 'sourceControlWebApp'
-  scope: resourceGroup(mainResourceGroup.name)
-  params: {
-    web: 'web'
-    webApp: 'azuregoat-ibr-webapp'
-  }
-  dependsOn: [
-    azureGoatResourceGroup
-    azureGoatAppService
-    azureGoatWebApp
-  ]
-}
+// module sourceControlWebApp '../../az-modules/Microsoft.Web/webapp/sourcecontrols/deploy.bicep' = {
+//   name: 'sourceControlWebApp'
+//   scope: resourceGroup(mainResourceGroup.name)
+//   params: {
+//     web: 'web'
+//     webApp: 'azuregoat-ibr-webapp'
+//   }
+//   dependsOn: [
+//     azureGoatResourceGroup
+//     azureGoatAppService
+//     azureGoatWebApp
+//   ]
+// }
