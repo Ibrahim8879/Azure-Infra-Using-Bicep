@@ -1,0 +1,72 @@
+name: "Setup & Deploy"
+
+on:
+  pull_request:
+        branches:
+          - main
+
+env:
+  LOCATION: "southeastasia"
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  check-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      # Login using final client details (from env or secrets)
+      - name: Azure Login (final)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ env.AZURE_CLIENT_ID }}
+          tenant-id: ${{ env.AZURE_TENANT_ID }}
+          subscription-id: ${{ env.AZURE_SUBSCRIPTION_ID }}
+
+      # --------------------------
+      # 🔽 Your main deploy section
+      # --------------------------
+      - name: Bicep Lint
+        uses: azure/cli@v2
+        with:
+          inlineScript: az bicep build --file ./src/iac/az-controllers/azure-services/main.bicep
+
+      - name: Bicep What-If Preview
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az deployment sub what-if \
+              --name whatif-${{ github.run_id }} \
+              --template-file ./src/iac/az-controllers/azure-services/main.bicep \
+              --parameters ./src/params/dev/main.bicepparam \
+              --location $LOCATION
+
+      - name: Bicep Validate
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az deployment sub validate \
+              --template-file ./src/iac/az-controllers/azure-services/main.bicep \
+              --parameters ./src/params/main.bicepparam \
+              --location $LOCATION
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          framework: bicep
+        continue-on-error: true
+
+      - name: PSRule
+        uses: microsoft/ps-rule@v2.9.0
+        with:
+          modules: PSRule.Rules.Azure
+          outputFormat: sarif
+          summary: true
+          inputPath: ./src
+          option: .ps-rule.yaml

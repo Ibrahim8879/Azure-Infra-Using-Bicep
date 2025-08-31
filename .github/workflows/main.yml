@@ -1,12 +1,8 @@
-name: Deploy Infra and Trigger App
+name: Deploy Infrastructure
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
+  # Triggers the workflow on push only for the "main" branch
   push:
-    branches: [ "development-ibrahim" ]
-  pull_request:
-    branches: [ "development-ibrahim" ]
-
-  workflow_dispatch:
+    - main
 
 permissions:
   id-token: write
@@ -21,7 +17,7 @@ jobs:
     - name: Checkout Infra
       uses: actions/checkout@v3
 
-      # This OIDC must have permission to assign role, create reg-app.
+    # This OIDC must have permission to create resources
     - name: Azure Login (OIDC)
       uses: azure/login@v1
       with:
@@ -30,57 +26,10 @@ jobs:
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
     # Deploy Infrastructure
-    - name: Deploy Bicep
-      run: |
-        az deployment sub create \
-          --location southeastasia \
-          --template-file ./src/iac/az-controllers/az-services/main.bicep \
-          --parameters ./src/params/main.bicepparam \
-          --debug
-
-    # Deploy 2ndary OIDC for web app
-    - name: Deploy Bicep
-      run: |
-        az deployment sub create \
-          --location southeastasia \
-          --template-file ./src/iac/az-controllers/az-entraid/main.bicep \
-          --parameters ./src/params/entraid/main.bicepparam \
-          --output json > deployment_output.json \
-          --debug
-
-    # Get OIDC Secrets      
-    - name: Extract OIDC Outputs from File
-      id: extract_outputs
-      run: |
-        export AZURE_CLIENT_ID=$(jq -r '.properties.outputs.AZURE_CLIENT_ID.value' deployment_output.json)
-        export AZURE_TENANT_ID=$(jq -r '.properties.outputs.AZURE_TENANT_ID.value' deployment_output.json)
-        export AZURE_SUBSCRIPTION_ID=$(jq -r '.properties.outputs.AZURE_SUBSCRIPTION_ID.value' deployment_output.json)
-        
-        echo "AZURE_CLIENT_ID=$AZURE_CLIENT_ID" >> $GITHUB_ENV
-        echo "AZURE_TENANT_ID=$AZURE_TENANT_ID" >> $GITHUB_ENV
-        echo "AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID" >> $GITHUB_ENV
-  
-    # Put Secrets in the Github
-    - name: Install GitHub CLI
-      run: sudo apt-get install gh -y
-
-    - name: Authenticate GitHub CLI
-      run: echo "${{ secrets.REPO_DISPATCH_TOKEN }}" | gh auth login --with-token
-
-    - name: Set secrets in web app repo
-      run: |
-        gh secret set AZURE_CLIENT_ID -b "$AZURE_CLIENT_ID" --repo Ibrahim8879/dotnetcore-docs-hello-world
-        gh secret set AZURE_TENANT_ID -b "$AZURE_TENANT_ID" --repo Ibrahim8879/dotnetcore-docs-hello-world
-        gh secret set AZURE_SUBSCRIPTION_ID -b "$AZURE_SUBSCRIPTION_ID" --repo Ibrahim8879/dotnetcore-docs-hello-world
-
-  trigger-app-deploy:
-    name: Trigger App Deployment
-    needs: deploy-infra
-    runs-on: ubuntu-latest
-    steps:
-    - name: Trigger dotnetcore-docs-hello-world repo
-      uses: peter-evans/repository-dispatch@v2
-      with:
-        token: ${{ secrets.REPO_DISPATCH_TOKEN }}
-        repository: Ibrahim8879/dotnetcore-docs-hello-world
-        event-type: deploy-dotnet-app
+    #- name: Deploy Bicep
+    #  run: |
+    #    az deployment sub create \
+    #      --location southeastasia \
+    #      --template-file ./src/iac/az-controllers/az-services/main.bicep \
+    #      --parameters ./src/params/main.bicepparam \
+    #      --debug
