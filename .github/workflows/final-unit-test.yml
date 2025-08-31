@@ -1,0 +1,110 @@
+name: "Setup & Deploy"
+
+on:
+  pull_request:
+        branches:
+          - main
+
+env:
+  LOCATION: "southeastasia"
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  check-and-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      # Login using final client details (from env or secrets)
+      - name: Azure Login (final)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # --------------------------
+      # 🔽 Your main deploy section
+      # --------------------------
+      - name: Bicep Lint
+        uses: azure/cli@v2
+        with:
+          inlineScript: az bicep build --file ./src/iac/az-controllers/azure-services/main.bicep
+
+      - name: Bicep What-If Preview
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az deployment sub what-if \
+              --name whatif-${{ github.run_id }} \
+              --template-file ./src/iac/az-controllers/azure-services/main.bicep \
+              --parameters ./src/params/dev/main.bicepparam \
+              --location $LOCATION
+
+      - name: Bicep Validate
+        uses: azure/cli@v2
+        with:
+          inlineScript: |
+            az deployment sub validate \
+              --template-file ./src/iac/az-controllers/azure-services/main.bicep \
+              --parameters ./src/params/main.bicepparam \
+              --location $LOCATION
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          framework: bicep
+        continue-on-error: true
+
+      - name: PSRule
+        uses: microsoft/ps-rule@v2.9.0
+        with:
+          modules: PSRule.Rules.Azure
+          outputFormat: sarif
+          summary: true
+          inputPath: ./src
+          option: .ps-rule.yaml
+  
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: check-and-validate
+    if: always()   # ensure notification is sent whether success or failure
+    steps:
+      - name: Slack notification via Bot Token
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          channel-id: C091TTQHEBW
+          slack-message: |
+            🚀 *Deploy Infrastructure* workflow completed
+            Repo: ${{ github.repository }}
+            Status: ${{ needs.check-and-validate.result }}
+            Commit: ${{ github.sha }}
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+
+      # Gmail Notification
+      #- name: Send Gmail notification
+      #  uses: dawidd6/action-send-mail@v3
+      #  with:
+      #    server_address: smtp.gmail.com
+      #    server_port: 465
+      #    username: ${{ secrets.GMAIL_USERNAME }}
+      #    password: ${{ secrets.GMAIL_APP_PASSWORD }}
+      #    subject: "Deploy Infrastructure - ${{ needs.deploy-infra.result }}"
+      #    to: me.email@gmail.com
+      #    from: ${{ secrets.GMAIL_USERNAME }}
+      #    body: |
+      #      Hello,
+      #      The *Deploy Infrastructure* workflow has completed.
+      #      Repository: ${{ github.repository }}
+      #      Status: ${{ needs.deploy-infra.result }}
+      #      Commit: ${{ github.sha }}
+      #      Regards,
+      #      GitHub Actions
