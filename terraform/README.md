@@ -1,0 +1,1 @@
+This Repo will contains the All Azure infrasturcture but in Terraform
