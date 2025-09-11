@@ -64,13 +64,13 @@ jobs:
     name: 'Client Tests'
     runs-on: ubuntu-latest
     needs: [pre-checks, shared-job]
-    if: always() && contains(join(github.event.pull_request.labels.*.name, ' '), 'client-')
+    if: always() && contains(join(fromJSON(needs.pre-checks.outputs.labels), ' '), 'client-')
     steps:
       - uses: actions/checkout@v3
       - name: Run client deployments
         run: |
-          echo "Checking client-* labels..."
-          labels=$(jq -r '.pull_request.labels[].name' <<< '${{ toJson(github.event) }}' | grep '^client-' || true)
+          labels=$(echo '${{ needs.pre-checks.outputs.labels }}' | jq -r '.[]' | grep '^client-' || true)
+          files=$(echo '${{ needs.pre-checks.outputs.files }}' | jq -r '.[]')
 
           if [ -z "$labels" ]; then
             echo "No client-* labels found."
@@ -79,5 +79,12 @@ jobs:
 
           for label in $labels; do
             client_name="${label#client-}"
-            echo "🚀 Running deployment for client: $client_name"
+            bicep_file="src/iac/az-controllers/azure-services/client/${client_name}.bicep"
+            param_file="src/params/dev/${client_name}.bicepparam"
+
+            if grep -q "$bicep_file" <<< "$files" || grep -q "$param_file" <<< "$files"; then
+              echo "🚀 Running deployment for client: $client_name"
+            else
+              echo "⚠️ Skipping $client_name — no relevant file changes"
+            fi
           done
