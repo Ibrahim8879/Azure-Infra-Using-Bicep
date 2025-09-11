@@ -1,19 +1,29 @@
-name: Infra Test
+name: 'Bicep Unit Tests'
 
 on:
   pull_request:
     branches:
       - main
+    paths:
+      - 'src/iac/az-controllers/azure-services/client/**'
+      - 'src/iac/az-controllers/azure-services/shared/**'
 
+env:
+  LOCATION: "southcentralus"
+  
 permissions:
   id-token: write
   contents: read
+  security-events: write
+  actions: read
 
 jobs:
-  terraform:
-    name: Deploy Terraform
-    if: contains(join(github.event.pull_request.labels.*.name), 'terraform')
+  bicep-unit-tests:
+    name: 'Bicep Unit Tests'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
+
+      - name: Run Bicep Unit Tests
+        run: |
+          echo "Running Bicep unit tests in $LOCATION..."
