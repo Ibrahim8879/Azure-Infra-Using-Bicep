@@ -8,6 +8,7 @@ on:
     paths:
       - 'src/iac/az-controllers/azure-services/client/**'
       - 'src/iac/az-controllers/azure-services/shared/**'
+      - 'src/params/dev/**'
 
 env:
   LOCATION: "southcentralus"
@@ -22,10 +23,15 @@ jobs:
   shared-job:
     name: 'Shared Tests'
     runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.labels.*.name, 'shared')
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'shared') &&
+      (
+        contains(github.event.pull_request.changed_files.*.filename, 'src/iac/az-controllers/azure-services/shared/') ||
+        contains(github.event.pull_request.changed_files.*.filename, 'src/params/dev/main.bicepparam')
+      )
     steps:
       - uses: actions/checkout@v3
-      - run: echo "Running SHARED tests in $LOCATION..."
+      - run: echo "✅ Running SHARED tests in $LOCATION..."
 
   client-job:
     name: 'Client Tests'
