@@ -54,8 +54,9 @@ jobs:
       files: ${{ needs.pre-checks.outputs.files }}
 
   clients:
-    uses: ./.github/workflows/clients.yml
+    uses: ./.github/workflows/client.yml
     needs: [pre-checks, shared]
+    if: always()
     with:
       labels: ${{ needs.pre-checks.outputs.labels }}
       files: ${{ needs.pre-checks.outputs.files }}
