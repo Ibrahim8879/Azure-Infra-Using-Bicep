@@ -2,12 +2,9 @@ name: 'Bicep Unit Tests'
 
 on:
   pull_request:
-    types: [opened, synchronize, labeled, unlabeled]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches:
       - main
-    paths:
-      - 'src/iac/az-controllers/azure-services/client/**'
-      - 'src/iac/az-controllers/azure-services/shared/**'
 
 env:
   LOCATION: "southcentralus"
@@ -15,6 +12,7 @@ env:
 permissions:
   id-token: write
   contents: read
+  pull-requests: read
   security-events: write
   actions: read
 
@@ -22,16 +20,37 @@ jobs:
   shared-job:
     name: 'Shared Tests'
     runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.labels.*.name, 'shared')
+    # must have shared label AND files under shared/*
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'shared') &&
+      github.event_name == 'pull_request' &&
+      (contains(join(github.event.pull_request.changed_files.*.filename, ' '), 'src/iac/az-controllers/azure-services/shared/'))
     steps:
       - uses: actions/checkout@v3
-      - run: echo "Running SHARED tests in $LOCATION..."
+      - name: Run Shared Deployment
+        run: |
+          echo "Running deployment for SHARED"
 
   client-job:
     name: 'Client Tests'
     runs-on: ubuntu-latest
-    needs: shared-job   # ensures shared runs first if both exist
-    if: contains(github.event.pull_request.labels.*.name, 'talos')
+    needs: shared-job
+    # must have a client-* label AND files under client/*
+    if: |
+      contains(join(github.event.pull_request.labels.*.name, ' '), 'client-') &&
+      github.event_name == 'pull_request' &&
+      (contains(join(github.event.pull_request.changed_files.*.filename, ' '), 'src/iac/az-controllers/azure-services/client/'))
     steps:
       - uses: actions/checkout@v3
-      - run: echo "Running CLIENT tests in $LOCATION..."
+
+      - name: Extract client name
+        id: extract
+        run: |
+          label=$(jq -r '.pull_request.labels[].name' <<< '${{ toJson(github.event) }}' | grep '^client-' | head -n1)
+          echo "Label: $label"
+          client_name="${label#client-}"
+          echo "client_name=$client_name" >> $GITHUB_OUTPUT
+
+      - name: Run client deployment
+        run: |
+          echo "Running deployment for client: ${{ steps.extract.outputs.client_name }}"
