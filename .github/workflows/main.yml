@@ -10,6 +10,16 @@ on:
       - 'src/iac/az-controllers/azure-services/shared/**'
       - 'src/params/dev/**'
 
+env:
+  LOCATION: "southcentralus"
+  
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+  actions: read
+  pull-requests: read   # 👈 required to fetch files list
+  
 jobs:
   pre-checks:
     name: Collect PR info
