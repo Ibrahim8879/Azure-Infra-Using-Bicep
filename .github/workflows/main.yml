@@ -84,7 +84,9 @@ jobs:
 
             if grep -q "$bicep_file" <<< "$files" || grep -q "$param_file" <<< "$files"; then
               echo "🚀 Running deployment for client: $client_name"
+              # put your az deployment command here
             else
-              echo "⚠️ Skipping $client_name — no relevant file changes"
+              echo "❌ ERROR: Label '$label' provided, but no matching file changes for client '$client_name'"
+              exit 1   # ❗ fail the job instead of skipping
             fi
           done
