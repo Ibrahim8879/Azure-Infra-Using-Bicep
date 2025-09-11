@@ -31,19 +31,27 @@ jobs:
     name: 'Client Tests'
     runs-on: ubuntu-latest
     needs: shared-job
-    # must have a client-* label AND files under client/*
     if: contains(join(github.event.pull_request.labels.*.name, ' '), 'client-')
     steps:
       - uses: actions/checkout@v3
 
-      - name: Extract client name
-        id: extract
+      - name: Run client deployments
         run: |
-          label=$(jq -r '.pull_request.labels[].name' <<< '${{ toJson(github.event) }}' | grep '^client-' | head -n1)
-          echo "Label: $label"
-          client_name="${label#client-}"
-          echo "client_name=$client_name" >> $GITHUB_OUTPUT
+          echo "Checking client-* labels..."
+          labels=$(jq -r '.pull_request.labels[].name' <<< '${{ toJson(github.event) }}' | grep '^client-' || true)
 
-      - name: Run client deployment
-        run: |
-          echo "Running deployment for client: ${{ steps.extract.outputs.client_name }}"
+          if [ -z "$labels" ]; then
+            echo "No client-* labels found."
+            exit 0
+          fi
+
+          for label in $labels; do
+            client_name="${label#client-}"
+            echo "🚀 Running deployment for client: $client_name"
+            az deployment sub what-if \
+              --name whatif-$client_name-${{ github.run_id }} \
+              --template-file ./src/iac/az-controllers/azure-services/client/$client_name.bicep \
+              --parameters ./src/params/dev/$client_name.bicepparam \
+              --parameters location=$LOCATION \
+              --location $LOCATION > whatif-$client_name
+          done
