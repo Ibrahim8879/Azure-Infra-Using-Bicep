@@ -21,14 +21,40 @@ permissions:
   pull-requests: read   # 👈 required to fetch files list
 
 jobs:
+  pre-checks:
+    name: Collect PR info
+    runs-on: ubuntu-latest
+    outputs:
+      labels: ${{ steps.collect.outputs.labels }}
+      files: ${{ steps.collect.outputs.files }}
+    steps:
+      - name: Collect labels and changed files
+        id: collect
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = context.payload.pull_request.labels.map(l => l.name);
+            const files = await github.paginate(
+              github.rest.pulls.listFiles, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+              }
+            );
+            const filenames = files.map(f => f.filename);
+
+            core.setOutput("labels", JSON.stringify(labels));
+            core.setOutput("files", JSON.stringify(filenames));
+
   shared-job:
     name: 'Shared Tests'
     runs-on: ubuntu-latest
+    needs: pre-checks
     if: |
-      contains(github.event.pull_request.labels.*.name, 'shared') &&
+      contains(fromJSON(needs.pre-checks.outputs.labels), 'shared') &&
       (
-        contains(github.event.pull_request.changed_files.*.filename, 'src/iac/az-controllers/azure-services/shared/main.bicep') ||
-        contains(github.event.pull_request.changed_files.*.filename, 'src/params/dev/main.bicepparam')
+        contains(join(fromJSON(needs.pre-checks.outputs.files), ' '), 'src/iac/az-controllers/azure-services/shared/') ||
+        contains(join(fromJSON(needs.pre-checks.outputs.files), ' '), 'src/params/dev/main.bicepparam')
       )
     steps:
       - uses: actions/checkout@v3
@@ -37,7 +63,7 @@ jobs:
   client-job:
     name: 'Client Tests'
     runs-on: ubuntu-latest
-    needs: [shared-job]
+    needs: [pre-checks, shared-job]
     if: always() && contains(join(github.event.pull_request.labels.*.name, ' '), 'client-')
     steps:
       - uses: actions/checkout@v3
