@@ -1,0 +1,41 @@
+name: 'Clients Workflow'
+
+on:
+  workflow_call:
+    inputs:
+      labels:
+        required: true
+        type: string
+      files:
+        required: true
+        type: string
+
+jobs:
+  client-job:
+    name: 'Client Tests'
+    runs-on: ubuntu-latest
+    if: contains(join(fromJSON(inputs.labels), ' '), 'client-')
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run client deployments
+        run: |
+          labels=$(echo '${{ inputs.labels }}' | jq -r '.[]' | grep '^client-' || true)
+          files=$(echo '${{ inputs.files }}' | jq -r '.[]')
+
+          if [ -z "$labels" ]; then
+            echo "No client-* labels found."
+            exit 0
+          fi
+
+          for label in $labels; do
+            client_name="${label#client-}"
+            bicep_file="src/iac/az-controllers/azure-services/client/${client_name}.bicep"
+            param_file="src/params/dev/${client_name}.bicepparam"
+
+            if grep -q "$bicep_file" <<< "$files" || grep -q "$param_file" <<< "$files"; then
+              echo "🚀 Running deployment for client: $client_name"
+            else
+              echo "❌ ERROR: Label '$label' given but no matching file changes for $client_name"
+              exit 1
+            fi
+          done
