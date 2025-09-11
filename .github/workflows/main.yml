@@ -19,28 +19,18 @@ permissions:
   actions: read
 
 jobs:
-  pre-checks:
-    name: "Pre Checks"
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "Pre-checks always run"
-
   sharedjob:
     name: 'Shared Tests'
     runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.labels.*.name, 'shared')
     steps:
-      - uses: actions/checkout@v3
-      - run: echo "Running SHARED tests in $LOCATION..."
+      - name: Shared Job
+        if: contains(github.event.pull_request.labels.*.name, 'shared')
+        uses: actions/checkout@v3
+        run: echo "Running SHARED tests in $LOCATION..."
 
-  clientjob:
-    name: 'Client Tests'
-    runs-on: ubuntu-latest
-    needs: [pre-checks, sharedjob]
-    if: contains(join(github.event.pull_request.labels.*.name, ' '), 'client-')
-    steps:
-      - uses: actions/checkout@v3
       - name: Run client deployments
+        if: contains(join(github.event.pull_request.labels.*.name, ' '), 'client-')
+        uses: actions/checkout@v3
         run: |
           echo "Checking client-* labels..."
           labels=$(jq -r '.pull_request.labels[].name' <<< '${{ toJson(github.event) }}' | grep '^client-' || true)
