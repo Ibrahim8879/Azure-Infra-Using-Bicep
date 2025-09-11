@@ -15,26 +15,28 @@ env:
 permissions:
   id-token: write
   contents: read
-  pull-requests: read
   security-events: write
   actions: read
 
 jobs:
-  run-tests:
-    name: "Controller Job"
+  sharedjob:
+    name: 'Shared Tests'
     runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'shared')
     steps:
       - uses: actions/checkout@v3
+      - run: echo "Running SHARED tests in $LOCATION..."
 
-      - name: Run Shared if labeled
-        if: contains(steps.labels.outputs.labels, 'shared')
+  client-job:
+    name: 'Client Tests'
+    runs-on: ubuntu-latest
+    needs: shared-job
+    if: always() && contains(join(github.event.pull_request.labels.*.name, ' '), 'client-')
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run client deployments
         run: |
-          echo "🚀 Running Shared Deployment..."
-
-      - name: Run Client Deployments
-        if: contains(join(github.event.pull_request.labels.*.name, ' '), 'client-')
-        run: |
-          echo "🚀 Checking client-* labels..."
+          echo "Checking client-* labels..."
           labels=$(jq -r '.pull_request.labels[].name' <<< '${{ toJson(github.event) }}' | grep '^client-' || true)
 
           if [ -z "$labels" ]; then
@@ -44,5 +46,5 @@ jobs:
 
           for label in $labels; do
             client_name="${label#client-}"
-            echo "➡️ Running deployment for client: $client_name"
+            echo "🚀 Running deployment for client: $client_name"
           done
