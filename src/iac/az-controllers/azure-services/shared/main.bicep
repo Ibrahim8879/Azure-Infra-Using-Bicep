@@ -10,6 +10,9 @@ param storageContainers object
 param userAssignedIdentity object
 param RoleAssignment object
 
+param userAssignedIdasdentity object
+param RoleAssignmenasdt object
+
 param automationAccount object
 param automationRunbook object
 
