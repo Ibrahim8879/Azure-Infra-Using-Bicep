@@ -26,7 +26,7 @@ jobs:
     if: |
       contains(github.event.pull_request.labels.*.name, 'shared') &&
       (
-        contains(github.event.pull_request.changed_files.*.filename, 'src/iac/az-controllers/azure-services/shared/') ||
+        contains(github.event.pull_request.changed_files.*.filename, 'src/iac/az-controllers/azure-services/shared/main.bicep') ||
         contains(github.event.pull_request.changed_files.*.filename, 'src/params/dev/main.bicepparam')
       )
     steps:

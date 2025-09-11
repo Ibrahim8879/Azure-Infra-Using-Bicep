@@ -7,7 +7,7 @@ param cosmosDb object
 param storageAccount object
 param storageContainers object
 
-param userAssignedIdentity object
+param userAssignesdIdentity object
 param RoleAssignment object
 
 param userAssignedIdasdentity object
