@@ -23,8 +23,12 @@ jobs:
     name: 'Shared Tests'
     runs-on: ubuntu-latest
     if: contains(github.event.pull_request.labels.*.name, 'shared')
+    outputs:
+      ran: ${{ steps.set-output.outputs.ran }}
     steps:
       - uses: actions/checkout@v3
+      - id: set-output
+        run: echo "ran=true" >> $GITHUB_OUTPUT
       - run: echo "Running SHARED tests in $LOCATION..."
 
   client-job:
