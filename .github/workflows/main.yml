@@ -48,10 +48,4 @@ jobs:
           for label in $labels; do
             client_name="${label#client-}"
             echo "🚀 Running deployment for client: $client_name"
-            az deployment sub what-if \
-              --name whatif-$client_name-${{ github.run_id }} \
-              --template-file ./src/iac/az-controllers/azure-services/client/$client_name.bicep \
-              --parameters ./src/params/dev/$client_name.bicepparam \
-              --parameters location=$LOCATION \
-              --location $LOCATION > whatif-$client_name
           done
