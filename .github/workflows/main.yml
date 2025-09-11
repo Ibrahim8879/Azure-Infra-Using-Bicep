@@ -32,6 +32,7 @@ jobs:
           echo "🚀 Running Shared Deployment..."
 
       - name: Run Client Deployments
+        if: contains(join(github.event.pull_request.labels.*.name, ' '), 'client-')
         run: |
           echo "🚀 Checking client-* labels..."
           labels=$(jq -r '.pull_request.labels[].name' <<< '${{ toJson(github.event) }}' | grep '^client-' || true)
