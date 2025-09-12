@@ -1,4 +1,4 @@
-name: 'Clients Workflow (Whatif)'
+name: 'Azure Bicep Create and Deploy - Client Services'
 
 on:
   workflow_call:
@@ -16,36 +16,41 @@ on:
         required: true
       AZURE_SUBSCRIPTION_ID:
         required: true
-
-env:
-  LOCATION: "southcentralus"
+      TALOS_KEYVAULT_SECRETS:
+        required: true
 
 permissions:
   id-token: write
   contents: read
   actions: read
   pull-requests: write
-  security-events: write
 
 jobs:
-  client-job:
-    name: 'Client Whatif'
+  build-and-deploy:
     runs-on: ubuntu-latest
-    if: contains(join(fromJSON(inputs.labels), ' '), 'client-')
-    env:
-      GH_TOKEN: ${{ github.token }}
     steps:
+      # Checkout code
       - uses: actions/checkout@v3
 
-      # Authenticate to Az CLI using OIDC
-      - name: 'Az CLI login'
-        uses: azure/login@v2
+      # Log into Azure
+      - uses: azure/login@v2
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      # Prepare Key Vault secrets
+      - name: Create talosSecrets.json and escape it
+        shell: bash
+        run: |
+          echo '${{ secrets.TALOS_KEYVAULT_SECRETS }}' > talosSecrets.json
+          TALOS_SECRETS_ESCAPED=$(cat talosSecrets.json | jq -c .)
+          echo "::add-mask::$TALOS_SECRETS_ESCAPED"
+          echo "TALOS_SECRETS_ESCAPED=$TALOS_SECRETS_ESCAPED" >> $GITHUB_ENV
 
-      - name: Run client what-if deployments
+      # Deploy all client files from labels
+      - name: Deploy Clients
+        shell: bash
         run: |
           labels=$(echo '${{ inputs.labels }}' | jq -r '.[]' | grep '^client-' || true)
           files=$(echo '${{ inputs.files }}' | jq -r '.[]')
@@ -56,31 +61,15 @@ jobs:
             param_file="src/params/dev/${client_name}.bicepparam"
 
             if grep -q "$bicep_file" <<< "$files" || grep -q "$param_file" <<< "$files"; then
-              echo "🚀 Running What-If for client: $client_name"
+              echo "🚀 Deploying client: $client_name"
 
-              # Lint
-              az bicep build --file "$bicep_file"
-
-              # Validate
+              # Deploy
               az deployment sub validate \
-                --name validate-${{ github.run_id }}-$client_name \
+                --name deploy-${{ github.run_id }}-$client_name \
                 --template-file "$bicep_file" \
                 --parameters "$param_file" \
-                --parameters location=$LOCATION \
-                --location $LOCATION
-
-              # What-if
-              az deployment sub what-if \
-                --name whatif-${{ github.run_id }}-$client_name \
-                --template-file "$bicep_file" \
-                --parameters "$param_file" \
-                --parameters location=$LOCATION \
-                --location $LOCATION > whatif-$client_name
-
-              # Post results
-              body="## What-If ($client_name)\n\n\`\`\`\n$(cat whatif-$client_name)\n\`\`\`"
-              gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
-                -f body="$body"
+                --parameters talosSecrets="$TALOS_SECRETS_ESCAPED" location=southcentralus \
+                --location southcentralus
             else
               echo "❌ ERROR: Label '$label' given but no matching file changes for $client_name"
               exit 1

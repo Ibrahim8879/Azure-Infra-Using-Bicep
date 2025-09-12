@@ -1,5 +1,3 @@
-name: 'Bicep Whatif / Deploy'
-
 on:
   pull_request:
     types: [opened, synchronize, reopened, labeled, unlabeled]
@@ -9,17 +7,14 @@ on:
       - 'src/iac/az-controllers/azure-services/client/**'
       - 'src/iac/az-controllers/azure-services/shared/**'
       - 'src/params/dev/**'
-      - '.github/workflows/bicep-whatif-*.yml'
+      - '.github/workflows/bicep-unit-*.yml'
+name: Azure ARM
 
-env:
-  LOCATION: "southcentralus"
-  
 permissions:
   id-token: write
   contents: read
   actions: read
   pull-requests: write
-  security-events: write
 
 jobs:
   pre-checks:
@@ -45,9 +40,9 @@ jobs:
             const filenames = files.map(f => f.filename);
             core.setOutput("labels", JSON.stringify(labels));
             core.setOutput("files", JSON.stringify(filenames));
-            
+
   shared:
-    uses: ./.github/workflows/bicep-whatif-shared.yml
+    uses: ./.github/workflows/bicep-create-shared.yml
     needs: pre-checks
     with:
       labels: ${{ needs.pre-checks.outputs.labels }}
@@ -56,9 +51,11 @@ jobs:
         AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
         AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        ADMIN_KEYVAULT_SECRETS: ${{ secrets.ADMIN_KEYVAULT_SECRETS }}
+        
 
   clients:
-    uses: ./.github/workflows/bicep-whatif-client.yml
+    uses: ./.github/workflows/bicep-create-client.yml
     needs: [pre-checks, shared]
     if: always() && (needs.shared.result == 'success' || needs.shared.result == 'skipped')
     with:
@@ -67,4 +64,5 @@ jobs:
     secrets:
         AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
         AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }} 
+        TALOS_KEYVAULT_SECRETS: ${{ secrets.TALOS_KEYVAULT_SECRETS }}
