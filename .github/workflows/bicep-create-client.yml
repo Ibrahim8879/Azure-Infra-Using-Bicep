@@ -77,16 +77,21 @@ jobs:
                 --parameters location=$LOCATION \
                 --location $LOCATION > whatif-$client_name
 
-              # Post results
+              # Post results (note: EOF must not be indented)
               body=$(cat <<EOF
-              <details>
-              <summary>## What-If ($client_name)</summary>
-              \`\`\`
-              $(cat whatif-$client_name)
-              \`\`\`
-              </details>
-              EOF
-              )
+<details>
+<summary>## What-If ($client_name)</summary>
+
+\`\`\`
+$(cat whatif-$client_name)
+\`\`\`
+
+</details>
+EOF
+)
+
+              gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
+                -f body="$body"
             else
               echo "❌ ERROR: Label '$label' given but no matching file changes for $client_name"
               exit 1
