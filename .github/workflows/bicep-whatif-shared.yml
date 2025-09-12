@@ -33,6 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      # Authenticate to Az CLI using OIDC
       - name: 'Az CLI login'
         uses: azure/login@v2
         with:
