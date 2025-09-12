@@ -12,10 +12,13 @@ on:
       secrets:
         AZURE_CLIENT_ID:
           required: true
+          type: string
         AZURE_TENANT_ID:
           required: true
+          type: string
         AZURE_SUBSCRIPTION_ID:
           required: true
+          type: string
 env:
   LOCATION: "southcentralus"
 
