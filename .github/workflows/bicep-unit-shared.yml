@@ -16,6 +16,8 @@ on:
         required: true
       AZURE_SUBSCRIPTION_ID:
         required: true
+      ADMIN_KEYVAULT_SECRETS:
+        required: true
 env:
   LOCATION: "southcentralus"
 

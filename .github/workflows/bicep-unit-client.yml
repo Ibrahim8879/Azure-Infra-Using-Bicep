@@ -16,6 +16,8 @@ on:
         required: true
       AZURE_SUBSCRIPTION_ID:
         required: true
+      TALOS_KEYVAULT_SECRETS:
+        required: true
 
 env:
   LOCATION: "southcentralus"

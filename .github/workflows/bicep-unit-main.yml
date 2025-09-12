@@ -55,7 +55,9 @@ jobs:
     secrets:
         AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
         AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }} 
+        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        ADMIN_KEYVAULT_SECRETS: ${{ secrets.ADMIN_KEYVAULT_SECRETS }}
+        
 
   clients:
     uses: ./.github/workflows/bicep-unit-client.yml
@@ -68,3 +70,4 @@ jobs:
         AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
         AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
         AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }} 
+        TALOS_KEYVAULT_SECRETS: ${{ secrets.TALOS_KEYVAULT_SECRETS }}
