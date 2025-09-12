@@ -9,7 +9,7 @@ on:
       - 'src/iac/az-controllers/azure-services/client/**'
       - 'src/iac/az-controllers/azure-services/shared/**'
       - 'src/params/dev/**'
-      - '.github/workflows/bicep-whatif-*.yml'
+      - '.github/workflows/bicep-create-*.yml'
 
 env:
   LOCATION: "southcentralus"
