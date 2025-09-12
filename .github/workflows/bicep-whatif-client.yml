@@ -9,16 +9,13 @@ on:
       files:
         required: true
         type: string
-      secrets:
-        AZURE_CLIENT_ID:
-          required: true
-          type: string
-        AZURE_TENANT_ID:
-          required: true
-          type: string
-        AZURE_SUBSCRIPTION_ID:
-          required: true
-          type: string
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
 
 env:
   LOCATION: "southcentralus"
