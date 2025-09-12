@@ -3,8 +3,13 @@ name: 'Bicep Unit Tests'
 # Run only on PRs targeting main branch
 on:
   pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
     branches:
       - main
+    paths:
+      - 'src/iac/az-controllers/azure-services/client/**'
+      - 'src/iac/az-controllers/azure-services/shared/**'
+      - 'src/params/dev/**'
 
 env:
   LOCATION: "southeastasia"
