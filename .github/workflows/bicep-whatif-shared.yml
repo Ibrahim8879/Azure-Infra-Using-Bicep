@@ -16,10 +16,9 @@ env:
 permissions:
   id-token: write
   contents: read
-  security-events: write
-  pull-requests: read
-  pull-requests: write
   actions: read
+  pull-requests: write
+  security-events: write
 
 jobs:
   shared-job:
