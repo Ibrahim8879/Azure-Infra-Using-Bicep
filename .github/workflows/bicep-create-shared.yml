@@ -1,4 +1,4 @@
-name: 'Shared Workflow (Whatif)'
+name: 'Azure Bicep Create and Deploy - Shared Services'
 
 on:
   workflow_call:
@@ -16,20 +16,15 @@ on:
         required: true
       AZURE_SUBSCRIPTION_ID:
         required: true
-
-env:
-  LOCATION: "southcentralus"
+      ADMIN_KEYVAULT_SECRETS:
+        required: true
 
 permissions:
   id-token: write
   contents: read
-  actions: read
-  pull-requests: write
-  security-events: write
 
 jobs:
-  shared-job:
-    name: 'Shared Whatif'
+  build-and-deploy:
     runs-on: ubuntu-latest
     if: |
       contains(fromJSON(inputs.labels), 'shared') &&
@@ -38,59 +33,32 @@ jobs:
         contains(join(fromJSON(inputs.files), ' '), 'src/params/dev/main.bicepparam')
       )
     steps:
-      - uses: actions/checkout@v3
+      # Checkout code
+    - uses: actions/checkout@main
 
-      # Authenticate to Az CLI using OIDC
-      - name: 'Az CLI login'
-        uses: azure/login@v2
-        with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
-      # Lint
-      - name: Bicep Lint (Shared)
-        uses: Azure/cli@v2
-        with:
-          inlineScript: az bicep build --file ./src/iac/az-controllers/azure-services/shared/main.bicep
-
-      # Validate
-      - name: Bicep Validate (Shared)
-        uses: Azure/cli@v2
-        with:
-          inlineScript: |
-            az deployment sub validate \
-              --name validate-${{ github.run_id }} \
-              --template-file ./src/iac/az-controllers/azure-services/shared/main.bicep \
-              --parameters ./src/params/dev/main.bicepparam \
-              --parameters location=$LOCATION \
-              --location $LOCATION
-
-      # What-if
-      - name: What-If (Shared)
-        id: whatif-shared
-        uses: Azure/cli@v2
-        with:
-          inlineScript: |
-            az deployment sub what-if \
-              --name whatif-shared-${{ github.run_id }} \
-              --template-file ./src/iac/az-controllers/azure-services/shared/main.bicep \
-              --parameters ./src/params/dev/main.bicepparam \
-              --parameters location=$LOCATION \
-              --location $LOCATION > whatif-shared
-
-      # Publish What-If to PR
-      - name: Publish What-If (Shared)
-        uses: actions/github-script@v7
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const fs = require('fs');
-            const output = fs.readFileSync('whatif-shared', 'utf8');
-            const body = `## What-If (Shared)\n\n\`\`\`\n${output}\n\`\`\``;
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            })
+      # Log into Azure
+    - uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      # For Key Vault Secrets to Get ready for AZ CLI
+    - name: Create adminSecrets.json and escape it
+      shell: bash
+      run: |
+        echo '${{ secrets.ADMIN_KEYVAULT_SECRETS }}' > adminSecrets.json
+        # Escape the JSON string so it can be safely passed inline
+        ADMIN_SECRETS_ESCAPED=$(cat adminSecrets.json | jq -c .)
+        echo "::add-mask::$ADMIN_SECRETS_ESCAPED"
+        echo "ADMIN_SECRETS_ESCAPED=$ADMIN_SECRETS_ESCAPED" >> $GITHUB_ENV
+    
+    - name: deploy
+      uses: Azure/cli@v2
+      with:
+        inlineScript: |
+          az deployment sub validate \
+            --template-file ./src/iac/az-controllers/azure-services/shared/main.bicep \
+            --parameters ./src/params/dev/main.bicepparam \
+            --parameters adminSecrets="$ADMIN_SECRETS_ESCAPED" location=southcentralus \
+            --location southcentralus

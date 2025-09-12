@@ -1,29 +1,22 @@
-name: 'Bicep Whatif / Deploy'
+name: Azure ARM
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    types:
+      - closed
     branches:
       - main
-    paths:
-      - 'src/iac/az-controllers/azure-services/client/**'
-      - 'src/iac/az-controllers/azure-services/shared/**'
-      - 'src/params/dev/**'
-      - '.github/workflows/bicep-create-*.yml'
 
-env:
-  LOCATION: "southcentralus"
-  
 permissions:
   id-token: write
   contents: read
   actions: read
   pull-requests: write
-  security-events: write
 
 jobs:
   pre-checks:
     name: Collect PR info
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     outputs:
       labels: ${{ steps.collect.outputs.labels }}
@@ -45,26 +38,34 @@ jobs:
             const filenames = files.map(f => f.filename);
             core.setOutput("labels", JSON.stringify(labels));
             core.setOutput("files", JSON.stringify(filenames));
-            
+
+      - name: Checkout merged commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
   shared:
-    uses: ./.github/workflows/bicep-create-shared.yml
     needs: pre-checks
+    if: github.event.pull_request.merged == true
+    uses: ./.github/workflows/bicep-create-shared.yml
     with:
       labels: ${{ needs.pre-checks.outputs.labels }}
       files: ${{ needs.pre-checks.outputs.files }}
     secrets:
-        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      ADMIN_KEYVAULT_SECRETS: ${{ secrets.ADMIN_KEYVAULT_SECRETS }}
 
   clients:
-    uses: ./.github/workflows/bicep-create-client.yml
     needs: [pre-checks, shared]
-    if: always() && (needs.shared.result == 'success' || needs.shared.result == 'skipped')
+    if: github.event.pull_request.merged == true && (needs.shared.result == 'success' || needs.shared.result == 'skipped')
+    uses: ./.github/workflows/bicep-create-client.yml
     with:
       labels: ${{ needs.pre-checks.outputs.labels }}
       files: ${{ needs.pre-checks.outputs.files }}
     secrets:
-        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-        AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-        AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }} 
+      TALOS_KEYVAULT_SECRETS: ${{ secrets.TALOS_KEYVAULT_SECRETS }}
