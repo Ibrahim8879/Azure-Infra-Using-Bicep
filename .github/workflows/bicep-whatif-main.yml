@@ -10,7 +10,7 @@ on:
       - 'src/iac/az-controllers/azure-services/shared/**'
       - 'src/params/dev/**'
       - '.github/workflows/bicep-whatif-*.yml'
-      
+
 env:
   LOCATION: "southcentralus"
   
@@ -47,14 +47,14 @@ jobs:
             core.setOutput("files", JSON.stringify(filenames));
 
   shared:
-    uses: ./.github/workflows/bicep-whatif-deploy/shared.yml
+    uses: ./.github/workflows/bicep-whatif-shared.yml
     needs: pre-checks
     with:
       labels: ${{ needs.pre-checks.outputs.labels }}
       files: ${{ needs.pre-checks.outputs.files }}
 
   clients:
-    uses: ./.github/workflows/bicep-whatif-deploy/client.yml
+    uses: ./.github/workflows/bicep-whatif-client.yml
     needs: [pre-checks, shared]
     if: always()
     with:
