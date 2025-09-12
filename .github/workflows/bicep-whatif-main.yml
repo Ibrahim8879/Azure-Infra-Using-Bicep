@@ -5,7 +5,12 @@ on:
     types: [opened, synchronize, reopened, labeled, unlabeled]
     branches:
       - main
-
+    paths:
+      - 'src/iac/az-controllers/azure-services/client/**'
+      - 'src/iac/az-controllers/azure-services/shared/**'
+      - 'src/params/dev/**'
+      - '.github/workflows/bicep-whatif-*.yml'
+      
 env:
   LOCATION: "southcentralus"
   
