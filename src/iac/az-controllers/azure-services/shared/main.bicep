@@ -1,5 +1,6 @@
 targetScope='subscription'
 
+param location string
 param adminSecrets array
 param mainResourceGroup object
 
