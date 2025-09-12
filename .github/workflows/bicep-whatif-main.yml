@@ -15,7 +15,9 @@ env:
   LOCATION: "southcentralus"
   
 permissions:
+  id-token: write
   contents: read
+  security-events: write
   actions: read
   pull-requests: read
 
