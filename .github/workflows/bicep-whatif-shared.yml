@@ -11,13 +11,13 @@ on:
         type: string
 
 env:
-  LOCATION: "southeastasia"
+  LOCATION: "southcentralus"
 
 permissions:
   id-token: write
   contents: read
   security-events: write
-  pull-requests: read
+  pull-requests: write
   actions: read
 
 jobs:

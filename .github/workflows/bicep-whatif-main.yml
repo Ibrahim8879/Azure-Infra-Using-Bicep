@@ -12,14 +12,14 @@ on:
       - '.github/workflows/bicep-whatif-*.yml'
 
 env:
-  LOCATION: "southeastasia"
+  LOCATION: "southcentralus"
   
 permissions:
   id-token: write
   contents: read
   security-events: write
   actions: read
-  pull-requests: read
+  pull-requests: write
 
 jobs:
   pre-checks:
