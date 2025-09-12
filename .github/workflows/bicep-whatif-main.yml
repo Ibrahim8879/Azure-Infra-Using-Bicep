@@ -12,7 +12,7 @@ on:
       - '.github/workflows/bicep-whatif-*.yml'
 
 env:
-  LOCATION: "southcentralus"
+  LOCATION: "southeastasia"
   
 permissions:
   id-token: write

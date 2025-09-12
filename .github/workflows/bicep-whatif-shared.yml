@@ -11,7 +11,7 @@ on:
         type: string
 
 env:
-  LOCATION: "southcentralus"
+  LOCATION: "southeastasia"
 
 permissions:
   id-token: write
