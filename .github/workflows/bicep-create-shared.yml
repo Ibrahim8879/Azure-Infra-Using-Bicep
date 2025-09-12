@@ -1,0 +1,64 @@
+name: 'Azure Bicep Create and Deploy - Shared Services'
+
+on:
+  workflow_call:
+    inputs:
+      labels:
+        required: true
+        type: string
+      files:
+        required: true
+        type: string
+    secrets:
+      AZURE_CLIENT_ID:
+        required: true
+      AZURE_TENANT_ID:
+        required: true
+      AZURE_SUBSCRIPTION_ID:
+        required: true
+      ADMIN_KEYVAULT_SECRETS:
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    if: |
+      contains(fromJSON(inputs.labels), 'shared') &&
+      (
+        contains(join(fromJSON(inputs.files), ' '), 'src/iac/az-controllers/azure-services/shared/') ||
+        contains(join(fromJSON(inputs.files), ' '), 'src/params/dev/main.bicepparam')
+      )
+    steps:
+      # Checkout code
+    - uses: actions/checkout@main
+
+      # Log into Azure
+    - uses: azure/login@v2
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      # For Key Vault Secrets to Get ready for AZ CLI
+    - name: Create adminSecrets.json and escape it
+      shell: bash
+      run: |
+        echo '${{ secrets.ADMIN_KEYVAULT_SECRETS }}' > adminSecrets.json
+        # Escape the JSON string so it can be safely passed inline
+        ADMIN_SECRETS_ESCAPED=$(cat adminSecrets.json | jq -c .)
+        echo "::add-mask::$ADMIN_SECRETS_ESCAPED"
+        echo "ADMIN_SECRETS_ESCAPED=$ADMIN_SECRETS_ESCAPED" >> $GITHUB_ENV
+    
+    - name: deploy
+      uses: Azure/cli@v2
+      with:
+        inlineScript: |
+          az deployment sub validate \
+            --template-file ./src/iac/az-controllers/azure-services/shared/main.bicep \
+            --parameters ./src/params/dev/main.bicepparam \
+            --parameters adminSecrets="$ADMIN_SECRETS_ESCAPED" location=southcentralus \
+            --location southcentralus
