@@ -1,5 +1,7 @@
 targetScope='subscription'
 
+param talosSecrets array
+
 module azureGoatResourceGroup '../../../az-modules/Microsoft.Resources/resourcegroup/deploy.bicep' = {
   name: 'azureGoatResourceGroup'
   params: {
