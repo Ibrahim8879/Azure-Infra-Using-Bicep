@@ -32,6 +32,8 @@ jobs:
     name: 'Client Whatif'
     runs-on: ubuntu-latest
     if: contains(join(fromJSON(inputs.labels), ' '), 'client-')
+    env:
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v3
 
