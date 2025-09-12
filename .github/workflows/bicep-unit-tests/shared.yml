@@ -1,0 +1,68 @@
+name: 'Shared Workflow'
+
+on:
+  workflow_call:
+    inputs:
+      labels:
+        required: true
+        type: string
+      files:
+        required: true
+        type: string
+
+env:
+  LOCATION: "southeastasia"
+
+jobs:
+  shared-job:
+    name: 'Shared Tests'
+    runs-on: ubuntu-latest
+    if: |
+      contains(fromJSON(inputs.labels), 'shared') &&
+      (
+        contains(join(fromJSON(inputs.files), ' '), 'src/iac/az-controllers/azure-services/shared/') ||
+        contains(join(fromJSON(inputs.files), ' '), 'src/params/dev/main.bicepparam')
+      )
+    steps:
+      - uses: actions/checkout@v3
+
+      # Prepare secrets for Shared
+      - name: Create adminSecrets.json and escape it
+        run: |
+          echo '${{ secrets.ADMIN_KEYVAULT_SECRETS }}' > adminSecrets.json
+          ADMIN_SECRETS_ESCAPED=$(cat adminSecrets.json | jq -c .)
+          echo "::add-mask::$ADMIN_SECRETS_ESCAPED"
+          echo "ADMIN_SECRETS_ESCAPED=$ADMIN_SECRETS_ESCAPED" >> $GITHUB_ENV
+
+      # Authenticate with OIDC
+      - name: 'Az CLI login'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Lint
+      - name: Bicep Lint (Shared)
+        uses: Azure/cli@v2
+        with:
+          inlineScript: az bicep build --file ./src/iac/az-controllers/azure-services/shared/main.bicep
+
+      # Validate
+      - name: Bicep Validate (Shared)
+        uses: Azure/cli@v2
+        with:
+          inlineScript: |
+            az deployment sub validate \
+              --name validate-${{ github.run_id }} \
+              --template-file ./src/iac/az-controllers/azure-services/shared/main.bicep \
+              --parameters ./src/params/dev/main.bicepparam \
+              --parameters adminSecrets="$ADMIN_SECRETS_ESCAPED" location=$LOCATION \
+              --location $LOCATION
+
+      # Security Scan
+      - name: Run Checkov action (Shared)
+        uses: bridgecrewio/checkov-action@master
+        with: 
+          framework: bicep
+          skip_check: CKV_AZURE_225,CKV_AZURE_59,CKV_AZURE_12,CKV_AZURE_222,CKV_AZURE_166,CKV_AZURE_139

@@ -1,0 +1,54 @@
+name: 'Bicep Whatif / Deploy'
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+env:
+  LOCATION: "southeastasia"
+
+jobs:
+  pre-checks:
+    name: Collect PR info
+    runs-on: ubuntu-latest
+    outputs:
+      labels: ${{ steps.collect.outputs.labels }}
+      files: ${{ steps.collect.outputs.files }}
+    steps:
+      - name: Collect labels and changed files
+        id: collect
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const labels = context.payload.pull_request.labels.map(l => l.name);
+            const files = await github.paginate(
+              github.rest.pulls.listFiles, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: context.payload.pull_request.number,
+              }
+            );
+            const filenames = files.map(f => f.filename);
+            core.setOutput("labels", JSON.stringify(labels));
+            core.setOutput("files", JSON.stringify(filenames));
+
+  shared:
+    uses: ./.github/workflows/bicep-whatif-deploy/shared.yml
+    needs: pre-checks
+    with:
+      labels: ${{ needs.pre-checks.outputs.labels }}
+      files: ${{ needs.pre-checks.outputs.files }}
+
+  clients:
+    uses: ./.github/workflows/bicep-whatif-deploy/client.yml
+    needs: [pre-checks, shared]
+    if: always()
+    with:
+      labels: ${{ needs.pre-checks.outputs.labels }}
+      files: ${{ needs.pre-checks.outputs.files }}

@@ -1,4 +1,4 @@
-using '../iac/az-controllers/az-services/main.bicep'
+using '../../iac/az-controllers/azure-services/shared/main.bicep'
 
 param mainResourceGroup = {
   location: 'southeastasia'
