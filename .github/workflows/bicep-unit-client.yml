@@ -18,7 +18,7 @@ on:
         required: true
       TALOS_KEYVAULT_SECRETS:
         required: true
-
+        
 env:
   LOCATION: "southcentralus"
 
@@ -77,11 +77,16 @@ jobs:
                 --parameters "$param_file" \
                 --parameters talosSecrets="$TALOS_SECRETS_ESCAPED" location=$LOCATION \
                 --location $LOCATION
-
-              # Security Scan
-              checkov -d "$bicep_file" --framework bicep --skip-check CKV_AZURE_225,CKV_AZURE_59,CKV_AZURE_12,CKV_AZURE_222,CKV_AZURE_166,CKV_AZURE_139
             else
               echo "❌ ERROR: Label '$label' given but no matching file changes for $client_name"
               exit 1
             fi
           done
+              # Security Scan
+            
+      # Run once only
+      - name: Run Checkov action (Shared)
+        uses: bridgecrewio/checkov-action@master
+        with: 
+          framework: bicep
+          skip_check: CKV_AZURE_225,CKV_AZURE_59,CKV_AZURE_12,CKV_AZURE_222,CKV_AZURE_166,CKV_AZURE_139
