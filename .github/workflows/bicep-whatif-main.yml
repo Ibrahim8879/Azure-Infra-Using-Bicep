@@ -56,7 +56,7 @@ jobs:
   clients:
     uses: ./.github/workflows/bicep-whatif-client.yml
     needs: [pre-checks, shared]
-    if: always()
+    if: always() && (needs.shared.result == 'success' || needs.shared.result == 'skipped')
     with:
       labels: ${{ needs.pre-checks.outputs.labels }}
       files: ${{ needs.pre-checks.outputs.files }}
