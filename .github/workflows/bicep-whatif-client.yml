@@ -1,4 +1,4 @@
-name: 'Clients Workflow'
+name: 'Clients Workflow (Whatif)'
 
 on:
   workflow_call:
@@ -16,9 +16,7 @@ on:
         required: true
       AZURE_SUBSCRIPTION_ID:
         required: true
-      TALOS_KEYVAULT_SECRETS:
-        required: true
-        
+
 env:
   LOCATION: "southcentralus"
 
@@ -31,21 +29,13 @@ permissions:
 
 jobs:
   client-job:
-    name: 'Client Tests'
+    name: 'Client Whatif'
     runs-on: ubuntu-latest
     if: contains(join(fromJSON(inputs.labels), ' '), 'client-')
     steps:
       - uses: actions/checkout@v3
 
-      # Prepare secrets for Clients
-      - name: Create talosSecrets.json and escape it
-        run: |
-          echo '${{ secrets.TALOS_KEYVAULT_SECRETS }}' > talosSecrets.json
-          TALOS_SECRETS_ESCAPED=$(cat talosSecrets.json | jq -c .)
-          echo "::add-mask::$TALOS_SECRETS_ESCAPED"
-          echo "TALOS_SECRETS_ESCAPED=$TALOS_SECRETS_ESCAPED" >> $GITHUB_ENV
-
-      # Authenticate with OIDC
+      # Authenticate to Az CLI using OIDC
       - name: 'Az CLI login'
         uses: azure/login@v2
         with:
@@ -53,8 +43,7 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-      # Run for each client-* label
-      - name: Run client deployments
+      - name: Run client what-if deployments
         run: |
           labels=$(echo '${{ inputs.labels }}' | jq -r '.[]' | grep '^client-' || true)
           files=$(echo '${{ inputs.files }}' | jq -r '.[]')
@@ -65,7 +54,7 @@ jobs:
             param_file="src/params/dev/${client_name}.bicepparam"
 
             if grep -q "$bicep_file" <<< "$files" || grep -q "$param_file" <<< "$files"; then
-              echo "🚀 Running deployment for client: $client_name"
+              echo "🚀 Running What-If for client: $client_name"
 
               # Lint
               az bicep build --file "$bicep_file"
@@ -75,18 +64,23 @@ jobs:
                 --name validate-${{ github.run_id }}-$client_name \
                 --template-file "$bicep_file" \
                 --parameters "$param_file" \
-                --parameters talosSecrets="$TALOS_SECRETS_ESCAPED" location=$LOCATION \
+                --parameters location=$LOCATION \
                 --location $LOCATION
+
+              # What-if
+              az deployment sub what-if \
+                --name whatif-${{ github.run_id }}-$client_name \
+                --template-file "$bicep_file" \
+                --parameters "$param_file" \
+                --parameters location=$LOCATION \
+                --location $LOCATION > whatif-$client_name
+
+              # Post results
+              body="## What-If ($client_name)\n\n\`\`\`\n$(cat whatif-$client_name)\n\`\`\`"
+              gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments \
+                -f body="$body"
             else
               echo "❌ ERROR: Label '$label' given but no matching file changes for $client_name"
               exit 1
             fi
           done
-              # Security Scan
-            
-      # Run once only
-      - name: Run Checkov action (Shared)
-        uses: bridgecrewio/checkov-action@master
-        with: 
-          framework: bicep
-          skip_check: CKV_AZURE_225,CKV_AZURE_59,CKV_AZURE_12,CKV_AZURE_222,CKV_AZURE_166,CKV_AZURE_139

@@ -1,4 +1,4 @@
-name: 'Shared Workflow'
+name: 'Shared Workflow (Whatif)'
 
 on:
   workflow_call:
@@ -16,8 +16,7 @@ on:
         required: true
       AZURE_SUBSCRIPTION_ID:
         required: true
-      ADMIN_KEYVAULT_SECRETS:
-        required: true
+
 env:
   LOCATION: "southcentralus"
 
@@ -30,7 +29,7 @@ permissions:
 
 jobs:
   shared-job:
-    name: 'Shared Tests'
+    name: 'Shared Whatif'
     runs-on: ubuntu-latest
     if: |
       contains(fromJSON(inputs.labels), 'shared') &&
@@ -41,15 +40,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # Prepare secrets for Shared
-      - name: Create adminSecrets.json and escape it
-        run: |
-          echo '${{ secrets.ADMIN_KEYVAULT_SECRETS }}' > adminSecrets.json
-          ADMIN_SECRETS_ESCAPED=$(cat adminSecrets.json | jq -c .)
-          echo "::add-mask::$ADMIN_SECRETS_ESCAPED"
-          echo "ADMIN_SECRETS_ESCAPED=$ADMIN_SECRETS_ESCAPED" >> $GITHUB_ENV
-
-      # Authenticate with OIDC
+      # Authenticate to Az CLI using OIDC
       - name: 'Az CLI login'
         uses: azure/login@v2
         with:
@@ -72,5 +63,34 @@ jobs:
               --name validate-${{ github.run_id }} \
               --template-file ./src/iac/az-controllers/azure-services/shared/main.bicep \
               --parameters ./src/params/dev/main.bicepparam \
-              --parameters adminSecrets="$ADMIN_SECRETS_ESCAPED" location=$LOCATION \
+              --parameters location=$LOCATION \
               --location $LOCATION
+
+      # What-if
+      - name: What-If (Shared)
+        id: whatif-shared
+        uses: Azure/cli@v2
+        with:
+          inlineScript: |
+            az deployment sub what-if \
+              --name whatif-shared-${{ github.run_id }} \
+              --template-file ./src/iac/az-controllers/azure-services/shared/main.bicep \
+              --parameters ./src/params/dev/main.bicepparam \
+              --parameters location=$LOCATION \
+              --location $LOCATION > whatif-shared
+
+      # Publish What-If to PR
+      - name: Publish What-If (Shared)
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('whatif-shared', 'utf8');
+            const body = `## What-If (Shared)\n\n\`\`\`\n${output}\n\`\`\``;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            })
