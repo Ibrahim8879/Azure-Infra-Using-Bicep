@@ -1,4 +1,4 @@
-name: 'Bicep Whatif / Deploy'
+name: 'Bicep Unit Tests'
 
 on:
   pull_request:
@@ -10,15 +10,15 @@ on:
       - 'src/iac/az-controllers/azure-services/shared/**'
       - 'src/params/dev/**'
 
+env:
+  LOCATION: "southcentralus"
+  
 permissions:
   id-token: write
   contents: read
   security-events: write
   actions: read
   pull-requests: read
-
-env:
-  LOCATION: "southeastasia"
 
 jobs:
   pre-checks:
