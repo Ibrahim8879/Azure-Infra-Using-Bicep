@@ -59,7 +59,7 @@ jobs:
 
   clients:
     needs: [pre-checks, shared]
-    if: always() && github.event.pull_request.merged == true && (needs.shared.result == 'success' || needs.shared.result == 'skipped')
+    if: github.event.pull_request.merged == true && (needs.shared.result == 'success' || needs.shared.result == 'skipped')
     uses: ./.github/workflows/bicep-create-client.yml
     with:
       labels: ${{ needs.pre-checks.outputs.labels }}
