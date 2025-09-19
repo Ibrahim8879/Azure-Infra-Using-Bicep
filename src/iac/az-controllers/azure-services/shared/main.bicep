@@ -5,8 +5,8 @@ param adminSecrets array
 param mainResourceGroup object
 
 // Resource group module
-module azureGoatResourceGroup '../../../az-modules/Microsoft.Resources/resourcegroup/deploy.bicep' = {
-  name: 'azureGoatResourceGroup'
+module azureGoatResourceGroup123 '../../../az-modules/Microsoft.Resources/resourcegroup/deploy.bicep' = {
+  name: 'azureGoatResourceGroup123'
   params: {
     resourceGroupLocation: mainResourceGroup.location
     resourceGroupName: mainResourceGroup.name
