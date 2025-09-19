@@ -14,6 +14,6 @@ module azureGoatResourceGroup2 '../../../az-modules/Microsoft.Resources/resource
   name: 'azureGoatResourceGroup2'
   params: {
     resourceGroupLocation: 'southeastasia'
-    resourceGroupName: 'test-rg223
+    resourceGroupName: 'test-rg2'
   }
 }
