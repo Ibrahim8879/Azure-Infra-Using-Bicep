@@ -16,4 +16,4 @@ module azureGoatResourceGroup2 '../../../az-modules/Microsoft.Resources/resource
     resourceGroupLocation: 'southeastasia'
     resourceGroupName: 'test-rg'
   }
-}
+}asdas
