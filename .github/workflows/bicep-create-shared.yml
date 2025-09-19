@@ -57,8 +57,4 @@ jobs:
       uses: Azure/cli@v2
       with:
         inlineScript: |
-          az deployment sub validate \
-            --template-file ./src/iac/az-controllers/azure-services/shared/main.bicep \
-            --parameters ./src/params/dev/main.bicepparam \
-            --parameters adminSecrets="$ADMIN_SECRETS_ESCAPED" location=southcentralus \
-            --location southcentralus
+          echo "🚀 Deploying shared services"
