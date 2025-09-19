@@ -46,7 +46,6 @@ jobs:
 
   shared:
     needs: pre-checks
-    if: github.event.pull_request.merged == true
     uses: ./.github/workflows/bicep-create-shared.yml
     with:
       labels: ${{ needs.pre-checks.outputs.labels }}
@@ -59,7 +58,7 @@ jobs:
 
   clients:
     needs: [pre-checks, shared]
-    if: github.event.pull_request.merged == true && (needs.shared.result == 'success' || needs.shared.result == 'skipped')
+    if: always() && (needs.shared.result == 'success' || needs.shared.result == 'skipped') && needs.pre-checks.result == 'success'
     uses: ./.github/workflows/bicep-create-client.yml
     with:
       labels: ${{ needs.pre-checks.outputs.labels }}
