@@ -6,7 +6,7 @@ module azureGoatResourceGroup '../../../az-modules/Microsoft.Resources/resourceg
   name: 'azureGoatResourceGroup'
   params: {
     resourceGroupLocation: 'southeastasia'
-    resourceGroupName: 'test-rg123'
+    resourceGroupName: 'test-rg'
   }
 }
 

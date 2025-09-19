@@ -6,7 +6,7 @@ param mainResourceGroup object
 
 // Resource group module
 module azureGoatResourceGroup123 '../../../az-modules/Microsoft.Resources/resourcegroup/deploy.bicep' = {
-  name: 'azureGoatResourceGroup123'
+  name: 'azureGoatResourceGroup'
   params: {
     resourceGroupLocation: mainResourceGroup.location
     resourceGroupName: mainResourceGroup.name
