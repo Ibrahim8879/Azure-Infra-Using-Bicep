@@ -53,26 +53,4 @@ jobs:
       - name: Deploy Clients
         shell: bash
         run: |
-          labels=$(echo '${{ inputs.labels }}' | jq -r '.[]' | grep '^client-' || true)
-          files=$(echo '${{ inputs.files }}' | jq -r '.[]')
-
-          for label in $labels; do
-            client_name="${label#client-}"
-            bicep_file="src/iac/az-controllers/azure-services/client/${client_name}.bicep"
-            param_file="src/params/dev/${client_name}.bicepparam"
-
-            if grep -q "$bicep_file" <<< "$files" || grep -q "$param_file" <<< "$files"; then
-              echo "🚀 Deploying client: $client_name"
-
-              # Deploy
-              az deployment sub validate \
-                --name deploy-${{ github.run_id }}-$client_name \
-                --template-file "$bicep_file" \
-                --parameters "$param_file" \
-                --parameters talosSecrets="$TALOS_SECRETS_ESCAPED" location=southcentralus \
-                --location southcentralus
-            else
-              echo "❌ ERROR: Label '$label' given but no matching file changes for $client_name"
-              exit 1
-            fi
-          done
+          echo "🚀 Deploying shared services"
